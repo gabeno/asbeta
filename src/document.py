@@ -25,6 +25,9 @@ def find_index(document, path, doc):
 
 
 def search(document, node, path):
+    if ID in node:
+        idx = find_index(document, path, node)
+        path.append(str(idx))
     if isinstance(node, dict) and ("value" in node or "text" in node or "_delete" in node):
         if "value" in node:
             if ID in node:
@@ -38,33 +41,30 @@ def search(document, node, path):
                 path.append(f"{Actions.ADD}:text:{node['text']}")
         if "_delete" in node:
             path.append(f"{Actions.REMOVE}::true")
-        return
+        return path
     for k, v in node.items():
         if k in SUB_DOCS:
             path.append(k)
         if isinstance(v, list):
-            idx = find_index(document, path, v[0])
-            if idx >= 0:
-                path.append(str(idx))
             search(document, v[0], path)
-
     return path
 
 
 def generate_update_statement(document: dict[str, Any], input: dict[str, Any]):
     result = {}
 
-    for cmd in input["posts"]:
-        path = search(document, {"posts": [cmd]}, [])
-        action, field, value = path[-1].split(":")
+    for k, cmds in input.items():
+        for cmd in cmds:
+            path = search(document, cmd, [k])
+            action, field, value = path[-1].split(":")
 
-        if action == Actions.UPDATE:
-            full_path = ".".join(path[:-1] + [field])
-            result.update({action: {full_path: value}})
-        elif action == Actions.REMOVE:
-            full_path = ".".join(path[:-1])
-            result.update({action: {full_path: value}})
-        elif action == Actions.ADD:
-            full_path = ".".join(path[:-1])
-            result.update({action: {full_path: [{field: value}]}})
+            if action == Actions.UPDATE:
+                full_path = ".".join(path[:-1] + [field])
+                result.update({action: {full_path: value}})
+            elif action == Actions.REMOVE:
+                full_path = ".".join(path[:-1])
+                result.update({action: {full_path: value}})
+            elif action == Actions.ADD:
+                full_path = ".".join(path[:-1])
+                result.update({action: {full_path: [{field: value}]}})
     return result

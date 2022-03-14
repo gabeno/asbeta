@@ -9,7 +9,6 @@ class Actions(str, Enum):
 
 
 ID = "_id"
-SUB_DOCS = ["mentions", "posts"]
 
 
 def find_index(
@@ -52,9 +51,8 @@ def search(
         return path
 
     for k, v in node.items():
-        if k in SUB_DOCS:
-            path.append(k)
         if isinstance(v, list):
+            path.append(k)
             search(document, v[0], path)
     return path
 
